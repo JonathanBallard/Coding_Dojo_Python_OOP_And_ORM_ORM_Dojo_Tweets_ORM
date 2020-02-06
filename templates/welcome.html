@@ -63,7 +63,7 @@
         <ul>
             {% for tweet in tweetList|reverse %}
                 <li>
-                    <h4>{{tweet['created_at']}}</h4>
+                    <h4>{{tweet.created_at}}</h4>
                     <p>{{tweet['tweet']}}</p>
                     <form class="form-group" action="/tweets/{{tweet['id']}}/like" method="POST">
                         <input type="hidden" name='like' value={{tweet['id']}}>
