@@ -5,9 +5,9 @@
 # Create DB relationships --DONE--
 # Update all routes to use correct queries --DONE--
 # Check templates for same --DONE--
-# CURRENTLY SHOWS ALL TWEETS
+# CURRENTLY SHOWS ALL TWEETS --FIXED--
 # FIX EDIT   --DONE--
-# FIX DELETE
+# FIX DELETE NEEDS TO CHECK IF USER IS WRITER OF TWEET --DONE--
 
 
 from flask import Flask, render_template, request, redirect, session, flash
@@ -67,7 +67,8 @@ class Tweets(db.Model):
     __tablename__ = "Tweets"    # optional		
     id = db.Column(db.Integer, primary_key=True)
     tweet = db.Column(db.String(255))
-    user_id = db.relationship(Users, secondary=likes_table)
+    user_id = db.Column(db.Integer, db.ForeignKey("Users.id"), nullable=False)
+    liker_id = db.relationship(Users, secondary=likes_table)
     created_at = db.Column(db.DateTime, server_default=func.now())    # notice the extra import statement above
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -280,11 +281,11 @@ def dashboard():
     tweetList2 = Tweets.query.all()
     tweetListFinal = list()
 
-    for tweet in range(len(tweetList2)):
-        print('tweet.user_id   323222222222222222222222222222222222222222222222', tweetList2[tweet].user_id)
-        if tweetList2[tweet].user_id in tweetList3:
+    for idx in range(len(tweetList2)):
+        print('tweet.user_id   323222222222222222222222222222222222222222222222', tweetList2[idx].user_id)
+        if tweetList2[idx].user_id in tweetList3:
             print('++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ appending')
-            tweetListFinal.append(tweetList2[tweet])
+            tweetListFinal.append(tweetList2[idx])
     
     # tweetList = mysql.query_db(f"SELECT tweets.id, tweets.tweet, tweets.created_at, tweets.updated_at, tweets.user_id, follows.followed_user_id, follows.follower_user_id FROM tweets JOIN users ON tweets.user_id = users.id JOIN follows ON users.id = follows.user_id WHERE tweets.user_id IN {followed_users} GROUP BY tweets.id")
     
@@ -299,7 +300,7 @@ def dashboard():
     likesNum = 55
     print('LIKESNUM=======55555555555555555555555555=====', likesNum)
 
-    return render_template('welcome.html', tweetList = tweetList2, likesNum = likesNum)
+    return render_template('welcome.html', tweetList = tweetListFinal, likesNum = likesNum)
 
 
 
@@ -326,7 +327,7 @@ def tweet_create():
         print('SESSION ID----------*******************************************', session['id'])
         print('TWEET----------*******************************************', incomingTweet)
 
-        new_tweet = Tweets(tweet = incomingTweet)
+        new_tweet = Tweets(tweet = incomingTweet, user_id = session['id'])
         db.session.add(new_tweet)
         db.session.commit()
         # query = "INSERT INTO tweets (tweet, user_id) VALUES(%(tweet)s, %(id)s);"
@@ -347,20 +348,20 @@ def delete_tweet(id):
     # tweet_check = mysql.query_db(f"SELECT user_id FROM tweets WHERE id={id};")
 
     print('TWEET CHECK ID----------*******************************************', tweet_check.user_id)
-    tweet_delete = Tweets.query.get(id)
-    db.session.delete(tweet_delete)
-    db.session.commit()
+    # tweet_delete = Tweets.query.get(id)
+    # db.session.delete(tweet_delete)
+    # db.session.commit()
 
 
     # CHECK IF USER IS WRITER OF TWEET ----- NOT WORKING -----
     # if userId of tweet = session['id]
-    # if tweet_check.user_id == session['id']:
-    #     tweet_delete = Tweets.query.get(id)
-    #     db.session.delete(tweet_delete)
-    #     db.session.commit()
-    #     # tweet_delete = mysql.query_db(f"DELETE FROM tweets WHERE id={id};")
-    # else:
-    #     flash('invalid user')
+    if tweet_check.user_id == session['id']:
+        tweet_delete = Tweets.query.get(id)
+        db.session.delete(tweet_delete)
+        db.session.commit()
+        # tweet_delete = mysql.query_db(f"DELETE FROM tweets WHERE id={id};")
+    else:
+        flash('invalid user')
 
     return redirect('/dashboard')
 
@@ -407,7 +408,7 @@ def like_tweet(id):
     userId = session['id']
     tweet_to_like = Tweets.query.get(id)
     user = Users.query.get(session['id'])
-    tweet_to_like.user_id.append(user)
+    tweet_to_like.liker_id.append(user)
     # tweet_like = mysql.query_db(f"INSERT INTO likes (user_id, tweet_id) VALUES({userId}, {id});")
     print('USER ID----------*******************************************', userId)
     print('TWEET ID----------*******************************************', id)
