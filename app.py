@@ -6,6 +6,8 @@
 # Update all routes to use correct queries --DONE--
 # Check templates for same --DONE--
 # CURRENTLY SHOWS ALL TWEETS
+# FIX EDIT   --DONE--
+# FIX DELETE
 
 
 from flask import Flask, render_template, request, redirect, session, flash
@@ -65,7 +67,7 @@ class Tweets(db.Model):
     __tablename__ = "Tweets"    # optional		
     id = db.Column(db.Integer, primary_key=True)
     tweet = db.Column(db.String(255))
-    user_id = db.relationship('Users', secondary=likes_table)
+    user_id = db.relationship(Users, secondary=likes_table)
     created_at = db.Column(db.DateTime, server_default=func.now())    # notice the extra import statement above
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
 
@@ -341,19 +343,24 @@ def delete_tweet(id):
     print('DELETE ID----------*******************************************', id)
     
 
-    tweet_check = Tweets.query.filter_by(id = id).all()
+    tweet_check = Tweets.query.get(id)
     # tweet_check = mysql.query_db(f"SELECT user_id FROM tweets WHERE id={id};")
 
-    print('TWEET CHECK ID----------*******************************************', tweet_check)
+    print('TWEET CHECK ID----------*******************************************', tweet_check.user_id)
+    tweet_delete = Tweets.query.get(id)
+    db.session.delete(tweet_delete)
+    db.session.commit()
 
+
+    # CHECK IF USER IS WRITER OF TWEET ----- NOT WORKING -----
     # if userId of tweet = session['id]
-    if tweet_check[0]['user_id'] == session['id']:
-        tweet_delete = Tweets.query.get(id)
-        db.session.delete(tweet_delete)
-        db.session.commit()
-        # tweet_delete = mysql.query_db(f"DELETE FROM tweets WHERE id={id};")
-    else:
-        flash('invalid user')
+    # if tweet_check.user_id == session['id']:
+    #     tweet_delete = Tweets.query.get(id)
+    #     db.session.delete(tweet_delete)
+    #     db.session.commit()
+    #     # tweet_delete = mysql.query_db(f"DELETE FROM tweets WHERE id={id};")
+    # else:
+    #     flash('invalid user')
 
     return redirect('/dashboard')
 
@@ -379,7 +386,7 @@ def update_tweet(id):
     if len(request.form['tweet']) < 1 or len(request.form['tweet']) > 255:
         flash('Invalid tweet length')
     else:    
-        tweet_edit = Tweets.query.filter_by(id = t_id)
+        tweet_edit = Tweets.query.get(t_id)
         # tweet_edit = mysql.query_db(query, data)
         tweet_edit.tweet = tweet
         db.session.commit()
